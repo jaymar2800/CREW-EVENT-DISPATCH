@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Event crew and equipment management spreadsheet for SoundStorm">
+  <meta name="theme-color" content="#1a73e8">
+  <title>SoundStorm Event Sheet</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Apple Touch Icon -->
+  <link rel="apple-touch-icon" href="SOUNDSTORM-LOGO.jpg">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-box soundstorm-theme">
+
+      <div class="login-brand">
+        <img src="SOUNDSTORM-LOGO.jpg" alt="SoundStorm Audio & Visual" class="login-logo">
+      </div>
+
+      <h2 class="login-title">Sign in</h2>
+      <p class="login-subtitle">Access the Event Sheet</p>
+
+      <form id="loginForm" class="login-form">
+        <label for="loginUser">Username</label>
+        <input id="loginUser" type="text" autocomplete="username" required>
+
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" autocomplete="current-password" required>
+
+        <button class="login-btn" type="submit">LOGIN</button>
+
+        <p id="loginError" class="login-error"></p>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= APP ROOT ================= -->
+  <div id="appRoot" style="display:none;">
+
+    <!-- Month Selector Overlay -->
+    <div id="monthSelectorOverlay" class="month-selector-overlay">
+      <div class="month-selector-box">
+        <h2 class="month-selector-title">Select Month</h2>
+        <p class="month-selector-subtitle">Choose a month to manage events</p>
+        <div id="monthGrid" class="month-grid"></div>
+        <div class="month-selector-footer">
+          <span id="selectedYearDisplay" class="year-display">2025</span>
+          <div class="year-controls">
+            <button id="prevYearBtn" class="year-btn">◀ Previous Year</button>
+            <button id="nextYearBtn" class="year-btn">Next Year ▶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button id="changeMonthBtn" class="menu-btn primary">📅 CHANGE MONTH</button>
+      <button id="addEventDateBtn" class="menu-btn primary">➕ ADD EVENT DATE</button>
+      <button id="addEventBtn" class="menu-btn">➕ ADD EVENT</button>
+      <button id="deleteEventBtn" class="menu-btn">🗑️ DELETE EVENT</button>
+      <button id="addCrewBtn" class="menu-btn">👥 ADD CREW</button>
+      <button class="menu-btn" id="logoutBtn">🚪 LOGOUT</button>
+      <span id="selectionInfo" style="margin-left: 20px; color: #666; font-size: 14px;">
+        Right-click on any cell for options
+      </span>
+    </div>
+
+    <!-- Taskbar for Minimized Windows -->
+    <div id="taskbar" class="taskbar"></div>
+
+    <!-- Date Tabs Container -->
+    <div id="dateTabsContainer" class="date-tabs-container">
+      <!-- Tabs will be added dynamically -->
+    </div>
+
+    <!-- Date Picker Modal -->
+    <div id="dateModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Add New Event Date</h2>
+          <span class="close" id="closeDateModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="date-picker-container">
+            <label for="eventDateInput">Select Event Date for <span id="selectedMonthLabel"></span>:</label>
+            <div id="dayPickerGrid" class="day-picker-grid"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="confirmDateBtn" class="primary-btn">Create Date Sheet</button>
+          <button id="cancelDateBtn" class="secondary-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crew Name Picker Modal -->
+    <div id="crewModal" class="modal">
+      <div class="modal-content draggable-window">
+        <div class="modal-header draggable-header">
+          <h2>Select Crew Names</h2>
+          <div class="window-controls">
+            <button class="window-btn minimize-btn" title="Minimize">−</button>
+            <button class="window-btn close-btn">&times;</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="horizontal-box-row" id="horizontalDepartments"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="selectCrewBtn" class="primary-btn">Select</button>
+          <button id="cancelCrewBtn" class="secondary-btn">Cancel</button>
+        </div>
+        <div class="resize-handle"></div>
+      </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu">
+      <div class="context-menu-item" id="contextSelectAll">
+        <span>✅ Select All</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" id="contextAddRowAbove">
+        <span>➕ Add Row Above</span>
+      </div>
+      <div class="context-menu-item" id="contextAddRowBelow">
+        <span>➕ Add Row Below</span>
+      </div>
+      <div class="context-menu-item" id="contextDeleteRow">
+        <span>🗑️ Delete Row</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" id="contextAddColumnLeft">
+        <span>➕ Add Column Left</span>
+      </div>
+      <div class="context-menu-item" id="contextAddColumnRight">
+        <span>➕ Add Column Right</span>
+      </div>
+      <div class="context-menu-item" id="contextDeleteColumn">
+        <span>🗑️ Delete Column</span>
+      </div>
+    </div>
+
+    
+
+    <div class="container">
+      <div id="emptyState" class="empty-state">
+        <h2>📅 No Events Yet</h2>
+        <p>Select a month and add your first event date to get started!</p>
+      </div>
+      <table id="sheet" style="display: none;">
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Include external JavaScript files -->
+    <script src="crew-data.js"></script>
+    <script src="event-manager.js"></script>
+    <script src="crew-picker.js"></script>
+    <script src="date-manager.js"></script>
+    <script src="month-manager.js"></script>
+
+    <script>
+      // ===================== AUTH (SIMPLE LOCAL LOGIN) =====================
+      const AUTH_KEY = "event_sheet_logged_in";
+      const DEMO_USER = "admin";
+      const DEMO_PASS = "1234";
+
+      function showApp() {
+        document.getElementById("loginOverlay").style.display = "none";
+        document.getElementById("appRoot").style.display = "block";
+        // Show month selector after login
+        if (typeof showMonthSelector === 'function') {
+          showMonthSelector();
+        }
+      }
+
+      function showLogin() {
+        document.getElementById("loginOverlay").style.display = "flex";
+        document.getElementById("appRoot").style.display = "none";
+      }
+
+      function doLogout() {
+        localStorage.removeItem(AUTH_KEY);
+        showLogin();
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Register Service Worker for offline functionality
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then((registration) => {
+              console.log('✅ Service Worker registered successfully:', registration.scope);
+            })
+            .catch((error) => {
+              console.log('❌ Service Worker registration failed:', error);
+            });
+        }
+        
+        // Auto-show app if already logged in
+        if (localStorage.getItem(AUTH_KEY) === "true") showApp();
+        else showLogin();
+
+        // Login handler
+        const form = document.getElementById("loginForm");
+        const err = document.getElementById("loginError");
+
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const u = document.getElementById("loginUser").value.trim();
+          const p = document.getElementById("loginPass").value;
+
+          if (u === DEMO_USER && p === DEMO_PASS) {
+            localStorage.setItem(AUTH_KEY, "true");
+            err.textContent = "";
+            showApp();
+          } else {
+            err.textContent = "Invalid username or password";
+          }
+        });
+
+        // Logout button
+        document.getElementById("logoutBtn").addEventListener("click", doLogout);
+      });
+    </script>
+
+    <!-- ===================== YOUR ORIGINAL SCRIPT ===================== -->
+    <script>
+      const sheet = document.getElementById('sheet');
+      const selectionInfo = document.getElementById('selectionInfo');
+      const contextMenu = document.getElementById('contextMenu');
+
+      let selectedCell = null;
+      let selectedRowIndex = null;
+      let selectedColumnIndex = null;
+
+      // Undo/Redo system
+      let history = [];
+      let historyIndex = -1;
+      const MAX_HISTORY = 50;
+
+      function saveState() {
+        history = history.slice(0, historyIndex + 1);
+        const currentSheet = document.getElementById('sheet');
+        const state = currentSheet.innerHTML;
+        history.push(state);
+
+        if (history.length > MAX_HISTORY) {
+          history.shift();
+        } else {
+          historyIndex++;
+        }
+      }
+
+      function undo() {
+        if (historyIndex > 0) {
+          historyIndex--;
+          const currentSheet = document.getElementById('sheet');
+          currentSheet.innerHTML = history[historyIndex];
+          reattachEventListeners();
+        }
+      }
+
+      function redo() {
+        if (historyIndex < history.length - 1) {
+          historyIndex++;
+          const currentSheet = document.getElementById('sheet');
+          currentSheet.innerHTML = history[historyIndex];
+          reattachEventListeners();
+        }
+      }
+
+      function reattachEventListeners() {
+        const currentSheet = document.getElementById('sheet');
+        const newSheet = currentSheet.cloneNode(true);
+        currentSheet.parentNode.replaceChild(newSheet, currentSheet);
+
+        const updatedSheet = document.getElementById('sheet');
+        window.sheet = updatedSheet;
+
+        updatedSheet.addEventListener('click', handleCellClick);
+        updatedSheet.addEventListener('contextmenu', handleContextMenu);
+        updatedSheet.addEventListener('mouseover', handleMouseOver);
+        updatedSheet.addEventListener('mouseout', handleMouseOut);
+        updatedSheet.addEventListener('input', handleInput);
+
+        selectedCell = null;
+        selectedRowIndex = null;
+        selectedColumnIndex = null;
+        selectionInfo.textContent = 'Right-click on any cell for options';
+        selectionInfo.style.color = '#666';
+        selectionInfo.style.fontWeight = 'normal';
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+          e.preventDefault();
+          redo();
+        } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+          e.preventDefault();
+          redo();
+        }
+      });
+
+      saveState();
+
+      function getActualColumnIndex(cell) {
+        const row = cell.parentElement;
+        let colIndex = 0;
+        for (let i = 0; i < cell.cellIndex; i++) {
+          const currentCell = row.cells[i];
+          colIndex += currentCell.colSpan || 1;
+        }
+        return colIndex;
+      }
+
+      function handleCellClick(e) {
+        if (e.target.tagName === 'TD') {
+          if (selectedCell) selectedCell.classList.remove('selected-cell');
+
+          selectedCell = e.target;
+          selectedCell.classList.add('selected-cell');
+
+          const row = selectedCell.parentElement;
+          selectedRowIndex = row.rowIndex;
+          selectedColumnIndex = getActualColumnIndex(selectedCell);
+
+          selectionInfo.textContent = `Selected: Row ${selectedRowIndex + 1}, Column ${selectedColumnIndex + 1}`;
+          selectionInfo.style.color = '#1a73e8';
+          selectionInfo.style.fontWeight = 'bold';
+        }
+      }
+
+      sheet.addEventListener('click', handleCellClick);
+
+      function handleContextMenu(e) {
+        if (e.target.tagName === 'TD') {
+          e.preventDefault();
+
+          if (selectedCell) selectedCell.classList.remove('selected-cell');
+
+          selectedCell = e.target;
+          selectedCell.classList.add('selected-cell');
+
+          const row = selectedCell.parentElement;
+          selectedRowIndex = row.rowIndex;
+          selectedColumnIndex = getActualColumnIndex(selectedCell);
+
+          selectionInfo.textContent = `Selected: Row ${selectedRowIndex + 1}, Column ${selectedColumnIndex + 1}`;
+          selectionInfo.style.color = '#1a73e8';
+          selectionInfo.style.fontWeight = 'bold';
+
+          contextMenu.style.left = e.pageX + 'px';
+          contextMenu.style.top = e.pageY + 'px';
+          contextMenu.classList.add('show');
+        }
+      }
+
+      sheet.addEventListener('contextmenu', handleContextMenu);
+
+      document.addEventListener('click', () => {
+        contextMenu.classList.remove('show');
+      });
+
+      document.getElementById('contextAddRowAbove').addEventListener('click', (e) => {
+        e.stopPropagation();
+        addRowAbove();
+        contextMenu.classList.remove('show');
+      });
+
+      document.getElementById('contextAddRowBelow').addEventListener('click', (e) => {
+        e.stopPropagation();
+        addRowBelow();
+        contextMenu.classList.remove('show');
+      });
+
+      document.getElementById('contextAddColumnLeft').addEventListener('click', (e) => {
+        e.stopPropagation();
+        addColumnLeft();
+        contextMenu.classList.remove('show');
+      });
+
+      document.getElementById('contextAddColumnRight').addEventListener('click', (e) => {
+        e.stopPropagation();
+        addColumnRight();
+        contextMenu.classList.remove('show');
+      });
+
+      document.getElementById('contextDeleteRow').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteRow();
+        contextMenu.classList.remove('show');
+      });
+
+      document.getElementById('contextDeleteColumn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteColumn();
+        contextMenu.classList.remove('show');
+      });
+
+      document.getElementById('contextSelectAll').addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectAllCells();
+        contextMenu.classList.remove('show');
+      });
+
+      function selectAllCells() {
+        const currentSheet = document.getElementById('sheet');
+        const allCells = currentSheet.querySelectorAll('td');
+        
+        // Remove previous selections
+        allCells.forEach(cell => cell.classList.remove('selected-cell'));
+        
+        // Add selection to all cells
+        allCells.forEach(cell => cell.classList.add('selected-cell'));
+        
+        selectionInfo.textContent = `Selected: All cells (${allCells.length} cells)`;
+        selectionInfo.style.color = '#1a73e8';
+        selectionInfo.style.fontWeight = 'bold';
+      }
+
+      function deleteRow() {
+        if (selectedCell === null) return alert('Please select a cell first!');
+
+        const currentSheet = document.getElementById('sheet');
+        const tbody = currentSheet.querySelector('tbody');
+        
+        // Don't allow deleting if only one row left
+        if (currentSheet.rows.length <= 1) {
+          return alert('Cannot delete the last row!');
+        }
+
+        if (confirm(`Are you sure you want to delete row ${selectedRowIndex + 1}?`)) {
+          tbody.deleteRow(selectedRowIndex);
+          selectedCell = null;
+          selectedRowIndex = null;
+          selectionInfo.textContent = 'Right-click on any cell for options';
+          selectionInfo.style.color = '#666';
+          selectionInfo.style.fontWeight = 'normal';
+          saveState();
+        }
+      }
+
+      function deleteColumn() {
+        if (selectedCell === null) return alert('Please select a cell first!');
+
+        const currentSheet = document.getElementById('sheet');
+        const rows = currentSheet.rows;
+        
+        // Check if we have more than one column
+        if (rows[0].cells.length <= 1) {
+          return alert('Cannot delete the last column!');
+        }
+
+        if (confirm(`Are you sure you want to delete column ${selectedColumnIndex + 1}?`)) {
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            let colCount = 0;
+            let deleteIndex = -1;
+
+            for (let j = 0; j < row.cells.length; j++) {
+              const cellColSpan = row.cells[j].colSpan || 1;
+              if (colCount === selectedColumnIndex) {
+                deleteIndex = j;
+                break;
+              }
+              colCount += cellColSpan;
+            }
+
+            if (deleteIndex >= 0 && deleteIndex < row.cells.length) {
+              row.deleteCell(deleteIndex);
+            }
+          }
+
+          selectedCell = null;
+          selectedColumnIndex = null;
+          selectionInfo.textContent = 'Right-click on any cell for options';
+          selectionInfo.style.color = '#666';
+          selectionInfo.style.fontWeight = 'normal';
+          saveState();
+        }
+      }
+
+      function addRowAbove() {
+        if (selectedCell === null) return alert('Please select a cell first!');
+
+        const currentSheet = document.getElementById('sheet');
+        const tbody = currentSheet.querySelector('tbody');
+        const selectedRow = currentSheet.rows[selectedRowIndex];
+        const numCells = selectedRow.cells.length;
+
+        const newRow = tbody.insertRow(selectedRowIndex);
+        for (let i = 0; i < numCells; i++) {
+          const cell = newRow.insertCell();
+          cell.contentEditable = 'true';
+          const originalCell = selectedRow.cells[i];
+          if (originalCell.colSpan > 1) cell.colSpan = originalCell.colSpan;
+        }
+
+        selectedRowIndex++;
+        saveState();
+      }
+
+      function addRowBelow() {
+        if (selectedCell === null) return alert('Please select a cell first!');
+
+        const currentSheet = document.getElementById('sheet');
+        const tbody = currentSheet.querySelector('tbody');
+        const selectedRow = currentSheet.rows[selectedRowIndex];
+        const numCells = selectedRow.cells.length;
+
+        const newRow = tbody.insertRow(selectedRowIndex + 1);
+        for (let i = 0; i < numCells; i++) {
+          const cell = newRow.insertCell();
+          cell.contentEditable = 'true';
+          const originalCell = selectedRow.cells[i];
+          if (originalCell.colSpan > 1) cell.colSpan = originalCell.colSpan;
+        }
+
+        saveState();
+      }
+
+      function addColumnLeft() {
+        if (selectedCell === null) return alert('Please select a cell first!');
+
+        const currentSheet = document.getElementById('sheet');
+        const rows = currentSheet.rows;
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          let colCount = 0;
+          let insertIndex = 0;
+
+          for (let j = 0; j < row.cells.length; j++) {
+            if (colCount >= selectedColumnIndex) { insertIndex = j; break; }
+            colCount += row.cells[j].colSpan || 1;
+            insertIndex = j + 1;
+          }
+
+          const cell = row.insertCell(insertIndex);
+          cell.contentEditable = 'true';
+        }
+
+        selectedColumnIndex++;
+        saveState();
+      }
+
+      function addColumnRight() {
+        if (selectedCell === null) return alert('Please select a cell first!');
+
+        const currentSheet = document.getElementById('sheet');
+        const rows = currentSheet.rows;
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          let colCount = 0;
+          let insertIndex = row.cells.length;
+
+          for (let j = 0; j < row.cells.length; j++) {
+            const cellColSpan = row.cells[j].colSpan || 1;
+            if (colCount + cellColSpan > selectedColumnIndex) {
+              insertIndex = j + 1;
+              break;
+            }
+            colCount += cellColSpan;
+          }
+
+          const cell = row.insertCell(insertIndex);
+          cell.contentEditable = 'true';
+        }
+
+        saveState();
+      }
+
+      function handleMouseOver(e) {
+        if (e.target.tagName === 'TD') e.target.classList.add('cell-hover');
+      }
+      function handleMouseOut(e) {
+        if (e.target.tagName === 'TD') e.target.classList.remove('cell-hover');
+      }
+
+      sheet.addEventListener('mouseover', handleMouseOver);
+      sheet.addEventListener('mouseout', handleMouseOut);
+
+      let contentChangeTimeout;
+      function handleInput(e) {
+        if (e.target.tagName === 'TD') {
+          clearTimeout(contentChangeTimeout);
+          contentChangeTimeout = setTimeout(() => {
+            saveState();
+            // Also save to localStorage when content changes
+            if (typeof saveDateSheetsToStorage === 'function') {
+              // Update current sheet in dateSheets before saving
+              if (currentDate) {
+                dateSheets[currentDate] = document.getElementById('sheet').innerHTML;
+              }
+              saveDateSheetsToStorage();
+            }
+          }, 1000);
+        }
+      }
+
+      sheet.addEventListener('input', handleInput);
+
+      document.getElementById('addEventBtn').addEventListener('click', () => {
+        addEvent();
+        // Save after adding event
+        if (typeof saveDateSheetsToStorage === 'function') {
+          setTimeout(() => {
+            if (currentDate) {
+              dateSheets[currentDate] = document.getElementById('sheet').innerHTML;
+            }
+            saveDateSheetsToStorage();
+          }, 100);
+        }
+      });
+      
+      document.getElementById('deleteEventBtn').addEventListener('click', () => {
+        deleteEvent();
+        // Save after deleting event
+        if (typeof saveDateSheetsToStorage === 'function') {
+          setTimeout(() => {
+            if (currentDate) {
+              dateSheets[currentDate] = document.getElementById('sheet').innerHTML;
+            }
+            saveDateSheetsToStorage();
+          }, 100);
+        }
+      });
+
+      initCrewPicker();
+      initDateManager();
+      initMonthManager();
+    </script>
+  </div>
+</body>
+<script>
+  // Call this AFTER login (or anytime you show the spreadsheet UI)
+  function initSpreadsheetUndoRedoAndSelection() {
+    const sheet = document.getElementById('sheet');
+    const selectionInfo = document.getElementById('selectionInfo');
+    const contextMenu = document.getElementById('contextMenu');
+
+    if (!sheet || !selectionInfo || !contextMenu) {
+      console.warn("Sheet UI not found yet. initSpreadsheetUndoRedoAndSelection() skipped.");
+      return;
+    }
+
+    // Prevent double-init (important if user logs out / logs in again)
+    if (window.__sheetInitialized) return;
+    window.__sheetInitialized = true;
+
+    let selectedCell = null;
+    let selectedRowIndex = null;
+    let selectedColumnIndex = null;
+
+    // Undo/Redo system
+    let history = [];
+    let historyIndex = -1;
+    const MAX_HISTORY = 50;
+
+    function saveState() {
+      history = history.slice(0, historyIndex + 1);
+
+      const currentSheet = document.getElementById('sheet');
+      const state = currentSheet.innerHTML;
+      history.push(state);
+
+      if (history.length > MAX_HISTORY) {
+        history.shift();
+      } else {
+        historyIndex++;
+      }
+    }
+
+    function reattachEventListeners() {
+      const currentSheet = document.getElementById('sheet');
+      const newSheet = currentSheet.cloneNode(true);
+      currentSheet.parentNode.replaceChild(newSheet, currentSheet);
+
+      const updatedSheet = document.getElementById('sheet');
+      window.sheet = updatedSheet;
+
+      updatedSheet.addEventListener('click', handleCellClick);
+      updatedSheet.addEventListener('contextmenu', handleContextMenu);
+      updatedSheet.addEventListener('mouseover', handleMouseOver);
+      updatedSheet.addEventListener('mouseout', handleMouseOut);
+      updatedSheet.addEventListener('input', handleInput);
+
+      selectedCell = null;
+      selectedRowIndex = null;
+      selectedColumnIndex = null;
+
+      selectionInfo.textContent = 'Right-click on any cell for options';
+      selectionInfo.style.color = '#666';
+      selectionInfo.style.fontWeight = 'normal';
+    }
+
+    function undo() {
+      if (historyIndex > 0) {
+        historyIndex--;
+        document.getElementById('sheet').innerHTML = history[historyIndex];
+        reattachEventListeners();
+      }
+    }
+
+    function redo() {
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        document.getElementById('sheet').innerHTML = history[historyIndex];
+        reattachEventListeners();
+      }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Ctrl/Cmd + Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      // Ctrl/Cmd + Y
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+      // Ctrl/Cmd + Shift + Z
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+      }
+    });
+
+    // Save initial state
+    saveState();
+
+    function getActualColumnIndex(cell) {
+      const row = cell.parentElement;
+      let colIndex = 0;
+      for (let i = 0; i < cell.cellIndex; i++) {
+        const currentCell = row.cells[i];
+        colIndex += currentCell.colSpan || 1;
+      }
+      return colIndex;
+    }
+
+    function handleCellClick(e) {
+      if (e.target.tagName === 'TD') {
+        if (selectedCell) selectedCell.classList.remove('selected-cell');
+
+        selectedCell = e.target;
+        selectedCell.classList.add('selected-cell');
+
+        const row = selectedCell.parentElement;
+        selectedRowIndex = row.rowIndex;
+        selectedColumnIndex = getActualColumnIndex(selectedCell);
+
+        selectionInfo.textContent = `Selected: Row ${selectedRowIndex + 1}, Column ${selectedColumnIndex + 1}`;
+        selectionInfo.style.color = '#1a73e8';
+        selectionInfo.style.fontWeight = 'bold';
+      }
+    }
+
+    function handleContextMenu(e) {
+      if (e.target.tagName === 'TD') {
+        e.preventDefault();
+
+        if (selectedCell) selectedCell.classList.remove('selected-cell');
+
+        selectedCell = e.target;
+        selectedCell.classList.add('selected-cell');
+
+        const row = selectedCell.parentElement;
+        selectedRowIndex = row.rowIndex;
+        selectedColumnIndex = getActualColumnIndex(selectedCell);
+
+        selectionInfo.textContent = `Selected: Row ${selectedRowIndex + 1}, Column ${selectedColumnIndex + 1}`;
+        selectionInfo.style.color = '#1a73e8';
+        selectionInfo.style.fontWeight = 'bold';
+
+        contextMenu.style.left = e.pageX + 'px';
+        contextMenu.style.top = e.pageY + 'px';
+        contextMenu.classList.add('show');
+      }
+    }
+
+    document.addEventListener('click', () => {
+      contextMenu.classList.remove('show');
+    });
+
+    function handleMouseOver(e) {
+      if (e.target.tagName === 'TD') e.target.classList.add('cell-hover');
+    }
+    function handleMouseOut(e) {
+      if (e.target.tagName === 'TD') e.target.classList.remove('cell-hover');
+    }
+
+    let contentChangeTimeout;
+    function handleInput(e) {
+      if (e.target.tagName === 'TD') {
+        clearTimeout(contentChangeTimeout);
+        contentChangeTimeout = setTimeout(() => saveState(), 800);
+      }
+    }
+
+    // Attach events initially
+    sheet.addEventListener('click', handleCellClick);
+    sheet.addEventListener('contextmenu', handleContextMenu);
+    sheet.addEventListener('mouseover', handleMouseOver);
+    sheet.addEventListener('mouseout', handleMouseOut);
+    sheet.addEventListener('input', handleInput);
+
+    // Context menu actions (keep your existing addRow/Column functions)
+    document.getElementById('contextAddRowAbove').addEventListener('click', (e) => {
+      e.stopPropagation();
+      addRowAbove();
+      contextMenu.classList.remove('show');
+      saveState();
+    });
+
+    document.getElementById('contextAddRowBelow').addEventListener('click', (e) => {
+      e.stopPropagation();
+      addRowBelow();
+      contextMenu.classList.remove('show');
+      saveState();
+    });
+
+    document.getElementById('contextAddColumnLeft').addEventListener('click', (e) => {
+      e.stopPropagation();
+      addColumnLeft();
+      contextMenu.classList.remove('show');
+      saveState();
+    });
+
+    document.getElementById('contextAddColumnRight').addEventListener('click', (e) => {
+      e.stopPropagation();
+      addColumnRight();
+      contextMenu.classList.remove('show');
+      saveState();
+    });
+
+    document.getElementById('contextDeleteRow')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteRow();
+      contextMenu.classList.remove('show');
+      saveState();
+    });
+
+    document.getElementById('contextDeleteColumn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteColumn();
+      contextMenu.classList.remove('show');
+      saveState();
+    });
+
+    document.getElementById('contextSelectAll')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectAllCells();
+      contextMenu.classList.remove('show');
+    });
+
+    // Buttons you already have
+    document.getElementById('addEventBtn')?.addEventListener('click', () => {
+      addEvent();
+      saveState();
+    });
+
+    document.getElementById('deleteEventBtn')?.addEventListener('click', () => {
+      deleteEvent();
+      saveState();
+    });
+
+    // Your init calls
+    initCrewPicker();
+    initDateManager();
+
+    console.log("✅ Undo/Redo + selection system initialized.");
+  }
+</script>
+
+</html>
