@@ -1,0 +1,26 @@
+{
+  "name": "SoundStorm Event Dispatch Sheet",
+  "short_name": "SoundStorm Dispatch",
+  "description": "Event crew and equipment management spreadsheet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a73e8",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "SOUNDSTORM-LOGO.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "SOUNDSTORM-LOGO.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "screenshots": []
+}
